@@ -1,0 +1,76 @@
+<!doctype html>
+<meta charset=utf-8>
+<title>Expenses</title>
+
+<style>
+body {
+	font-family: monospace;
+	white-space: pre;
+}
+</style>
+
+<script>
+var expenses = {
+	DigitalOcean: { cost: 5 * 3, interval: 4, },
+	Spotify: { cost: 10.69, interval: 4, },
+	'AT&T': { cost: 10, interval: 4, },
+	CloudFlare: { cost: 20, interval: 4, },
+	Misk: { cost: 12 * 7, interval: 52, },
+	Millenicom: { cost: 69.99, interval: 4, },
+};
+
+window.onload = function calcExpense() {
+	if (!document.body || !document.body.firstChild)
+		return setTimeout(calcExpense, 0);
+
+	var total = 0;
+	var maxlength = 0;
+
+	Object.keys(expenses).forEach(function(name) {
+		var expense = expenses[name];
+
+		total += expense.cost / expense.interval;
+
+		line = [
+			pad(name) +
+			lpad('$' + (expense.cost / expense.interval).toFixed(2), 6) + '/wk',
+			'($' + pad(expense.cost, 5), '/', pad(expense.interval, 2), 'weeks)',
+		].join(' ');
+
+		maxlength = Math.max(maxlength, line.length);
+		print(line);
+	});
+
+	print(new Array(maxlength + 1).join('-'));
+	print(pad('Expenses') + '$' + total.toFixed(2) + '/wk');
+
+	print();
+	(function loadProfile() {
+		if (typeof Gittip == 'undefined')
+			return setTimeout(loadProfile, 10);
+
+		Gittip.users.getPublic('rummik', function(data) {
+			print(pad('Receiving') + '$' + data.receiving + '/wk');
+			print(pad('Gittip Take') + '$20.00/wk');
+			print(new Array(maxlength + 1).join('-'));
+			print(pad('Total') + '$' + ((+data.receiving) + 20).toFixed(2) + '/wk');
+			print(pad('After Expenses') + '$' + (((+data.receiving) + 20) - total).toFixed(2) + '/wk');
+		});
+	})();
+};
+
+function print(text) {
+	document.body.appendChild(document.createTextNode((text || '') + '\n'));
+}
+
+function pad(text, length) {
+	length = length || 15;
+	return text + (new Array(length + 1 - text.toString().length).join(' '));
+}
+
+function lpad(text, length) {
+	return pad(text, length).replace(/^(.*?)(\s*)$/, '$2$1');
+}
+</script>
+<script src="http://gttp.co/v1/api.js" async></script>
+<body></body>

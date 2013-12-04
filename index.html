@@ -42,6 +42,7 @@ window.onload = function calcExpense() {
 	print(pad('Expenses') + '$' + total.toFixed(2) + '/wk');
 
 	print();
+
 	(function loadProfile() {
 		if (typeof Gittip == 'undefined')
 			return setTimeout(loadProfile, 10);

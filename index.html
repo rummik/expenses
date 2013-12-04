@@ -20,9 +20,6 @@ var expenses = {
 };
 
 window.onload = function calcExpense() {
-	if (!document.body || !document.body.firstChild)
-		return setTimeout(calcExpense, 0);
-
 	var total = 0;
 	var maxlength = 0;
 

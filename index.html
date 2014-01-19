@@ -1,14 +1,19 @@
 <!doctype html>
 <meta charset=utf-8>
 <title>Expenses</title>
+<body><span class="receipt-date">Hold on...grabbing things from Gittip...</span></body>
 
 <style>
 body {
 	font-family: monospace;
-	white-space: pre;
+}
+
+pre {
+	margin: 0;
 }
 </style>
 
+<script src="http://gttp.co/v1/api.js"></script>
 <script>
 var expenses = {
 	DigitalOcean: { cost: 5 * 2, interval: 4, },
@@ -23,6 +28,8 @@ var expenses = {
 window.onload = function calcExpense() {
 	var total = 0;
 	var maxlength = 0;
+
+	print();
 
 	Object.keys(expenses).forEach(function(name) {
 		var expense = expenses[name];
@@ -49,18 +56,23 @@ window.onload = function calcExpense() {
 			return setTimeout(loadProfile, 10);
 
 		Gittip.users.getPublic('rummik', function(data) {
-			print(pad('Receiving') + '$' + data.receiving + '/wk');
-			print(pad('Gittip Take') + '$22.00/wk');
-			print(pad('Chameleoid') + ' $0.50/wk');
-			print(new Array(maxlength + 1).join('-'));
-			print(pad('Total') + '$' + ((+data.receiving) + 22.5).toFixed(2) + '/wk');
-			print(pad('After Expenses') + '$' + (((+data.receiving) + 22.5) - total).toFixed(2) + '/wk');
+			Gittip.users.getCharts('rummik', function(chart) {
+				document.querySelector('.receipt-date').innerHTML = chart[0].date;
+				print(pad('Receiving') + '$' + (+chart[0].receipts).toFixed(2) + '/wk');
+				print(pad('Giving') + '-$' + (data.giving) + '/wk');
+
+				print(new Array(maxlength + 1).join('-'));
+				print(pad('Total') + '$' + (+chart[0].receipts - data.giving).toFixed(2) + '/wk');
+				print(pad('After Expenses') + '$' + ((+chart[0].receipts) - total - data.giving).toFixed(2) + '/wk');
+			});
 		});
 	})();
 };
 
 function print(text) {
-	document.body.appendChild(document.createTextNode((text || '') + '\n'));
+	var pre = document.createElement('pre');
+	document.body.appendChild(pre);
+	pre.appendChild(document.createTextNode(text || '\n'));
 }
 
 function pad(text, length) {
@@ -72,5 +84,3 @@ function lpad(text, length) {
 	return pad(text, length).replace(/^(.*?)(\s*)$/, '$2$1');
 }
 </script>
-<script src="http://gttp.co/v1/api.js" async></script>
-<body></body>

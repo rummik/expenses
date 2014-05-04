@@ -1,86 +1,171 @@
 <!doctype html>
 <meta charset=utf-8>
 <title>Expenses</title>
-<body><span class="receipt-date">Hold on...grabbing things from Gittip...</span></body>
+<body>
+	<span class="receipt-date">Hold on...grabbing things from Gittip...</span>
+	<table></table>
+</body>
+
+<script id="data" type="text/csv">
+category,name,cost,interval,description
+Hosting,Digital Ocean,5*2,1 month,"One personal droplet, one for projects"
+Hosting,CloudFlare,20,1 month,They handle DNS and make SSL easier
+Hosting,Misk,12*7,1 year,The registrar that makes it easier to find my things
+Hosting,Name.com,18.99,1 year,"The other registrar I use because Misk doesn't handle .me"
+Entertainment,Spotify,10.69,1 month,Music ♥
+Cell Carrier,Ting,39,1 month,"Prepaid phone service. (L, S, M)  No more 3-part pretend smartphone!"
+Transportation,Bus Pass,25,1 week,Covers the $25 weekly 1-zone pass
+Living,Food,40,1 week,"I have to eat, right?"
+Living,Misc,100,1 month,"Clothes, bathroom items, that sort of thing"
+</script>
 
 <style>
 body {
 	font-family: monospace;
+	cursor: default;
+	line-height: 1.4em;
 }
 
-pre {
+pre, table, tbody, tr, td {
+	padding: 0;
 	margin: 0;
+	border-collapse: collapse;
+}
+
+hr {
+	border: 0;
+	border-top: 1px solid #000;
+}
+
+span[title] {
+	border-bottom: 1px dashed #aaa;
+	cursor: help;
+}
+
+.cost {
+	text-align: right;
+}
+
+.cost:before {
+	content: '  ';
+	white-space: pre;
+}
+
+.cost:after {
+	content: ' / ' attr(data-interval);
+	width: 7em;
+	display: inline-block;
+	text-align: left;
+	white-space: pre;
+}
+
+.description {
+	padding-left: 1em;
 }
 </style>
 
 <script src="http://gttp.co/v1/api.js"></script>
+
 <script>
-var expenses = {
-	DigitalOcean: { cost: 5 * 2, interval: 4, },
-	Linode: { cost: 20, interval: 4, },
-	Spotify: { cost: 10.69, interval: 4, },
-	'AT&T': { cost: 10, interval: 4, },
-	CloudFlare: { cost: 20, interval: 4, },
-	Misk: { cost: 12 * 7, interval: 52, },
-	Millenicom: { cost: 69.99, interval: 4, },
-};
+var table = document.querySelector('table');
+var sum = 0;
 
-window.onload = function calcExpense() {
-	var total = 0;
-	var maxlength = 0;
+var columns = [];
+document.querySelector('#data').textContent
+	.split(/\r\n|\r|\n/g)
+	.forEach(function parse(rowData, n) {
+		// return if row data is empty
+		if (!(rowData = rowData.match(/(["']).+\1|[^,]+/g)))
+			return;
 
-	print();
+		// skip out if we're just populating column names
+		if (!columns.length) {
+			columns = rowData;
+			return;
+		}
 
-	Object.keys(expenses).forEach(function(name) {
-		var expense = expenses[name];
+		// populate row
+		var expense = {};
+		columns.forEach(function applyColumns(column, i) {
+			expense[column] = rowData[i].replace(/^(["'])(.*)\1$/g, '$2');
+		});
 
-		total += expense.cost / expense.interval;
+		// parse column data types
+		expense.costEvaled = parseCost(expense.cost).toFixed(2);
+		expense.intervalDays = parseInterval(expense.interval);
+		expense.costWeekly = (expense.costEvaled / expense.intervalDays * 7).toFixed(2);
+		expense.interval = /^1 /.test(expense.interval) ? expense.interval.substr(2) : expense.interval;
 
-		line = [
-			pad(name) +
-			lpad('$' + (expense.cost / expense.interval).toFixed(2), 6) + '/wk',
-			'($' + pad(expense.cost, 5), '/', pad(expense.interval, 2), 'weeks)',
-		].join(' ');
+		sum += +expense.costWeekly;
 
-		maxlength = Math.max(maxlength, line.length);
-		print(line);
+		(table.querySelector('tbody') || table).innerHTML += template(
+			'<tr class="category-{category|class}">' +
+				'<td><span title="{description}">{name}</span></td>' +
+				'<td class="cost" data-interval="{interval}"><span title="{cost}">${costEvaled}</span></td>' +
+			'</tr>',
+			expense
+		);
 	});
 
-	print(new Array(maxlength + 1).join('-'));
-	print(pad('Expenses') + '$' + total.toFixed(2) + '/wk');
 
-	print();
+(function loadProfile() {
+	if (typeof Gittip == 'undefined')
+		return setTimeout(loadProfile, 10);
 
-	(function loadProfile() {
-		if (typeof Gittip == 'undefined')
-			return setTimeout(loadProfile, 10);
+	Gittip.users.getPublic('rummik', function(data) {
+		Gittip.users.getCharts('rummik', function(chart) {
+			document.querySelector('.receipt-date').innerHTML = chart[0].date;
+			row('Giving', '$' + (+data.giving).toFixed(2));
+			table.innerHTML += '<tr><td colspan=2><hr></td></tr>';
+			row('Expenses', '~$' + (sum).toFixed(2));
 
-		Gittip.users.getPublic('rummik', function(data) {
-			Gittip.users.getCharts('rummik', function(chart) {
-				document.querySelector('.receipt-date').innerHTML = chart[0].date;
-				print(pad('Receiving') + '$' + (+chart[0].receipts).toFixed(2) + '/wk');
-				print(pad('Giving') + '-$' + (data.giving) + '/wk');
+			table.innerHTML += '<tr><td colspan=2>&nbsp;</td></tr>';
+			row('Receiving', '$' + (+chart[0].receipts).toFixed(2));
 
-				print(new Array(maxlength + 1).join('-'));
-				print(pad('Total') + '$' + (+chart[0].receipts - data.giving).toFixed(2) + '/wk');
-				print(pad('After Expenses') + '$' + ((+chart[0].receipts) - total - data.giving).toFixed(2) + '/wk');
-			});
+			var s = (+chart[0].receipts) - sum - data.giving;
+			row('After Expenses', (s > 0 ? '' : '-') + '$' + Math.max(s, -s).toFixed(2));
 		});
-	})();
-};
+	});
+})();
 
-function print(text) {
-	var pre = document.createElement('pre');
-	document.body.appendChild(pre);
-	pre.appendChild(document.createTextNode(text || '\n'));
+function row(text, num) {
+	table.innerHTML += template(
+		'<tr><td>{text}</td><td class="cost" data-interval="week">{num}</td></tr>',
+		{
+			text: text,
+			num: num
+		}
+	);
 }
 
-function pad(text, length) {
-	length = length || 15;
-	return text + (new Array(length + 1 - text.toString().length).join(' '));
+
+function template(str, data) {
+	return str.replace(/\{(\w+)(?:\|(\w+))?\}/g, function(n, match, filter) {
+		var out = data[match].toString()
+			.replace('&', '&amp;')
+			.replace('<', '&lt;')
+			.replace('>', '&gt;')
+			.replace('"', '&dquot;')
+			.replace("'", '&quot;');
+
+		if (filter == 'class')
+			out = out.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
+		return out;
+	});
 }
 
-function lpad(text, length) {
-	return pad(text, length).replace(/^(.*?)(\s*)$/, '$2$1');
+function parseCost(cost) {
+	// sanity check values before we eval them
+	if (/^\d+(\.\d+)?([*/+-]\d+(\.\d+)?)*$/.test(cost))
+		return eval(cost);
+	else
+		return 0;
+}
+
+// parse interval into days
+function parseInterval(interval) {
+	interval = interval.replace(/s$/, '').split(' ');
+	return interval[0] * (({ day: 1, week: 7, month: 30, year: 365 })[interval[1]]);
 }
 </script>

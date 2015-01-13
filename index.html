@@ -2,7 +2,7 @@
 <meta charset=utf-8>
 <title>Expenses</title>
 <body>
-	<span class="receipt-date">Hold on...grabbing things from Gittip...</span>
+	<span class="waiter">Hold on...grabbing things from Gratipay...</span>
 	<table></table>
 </body>
 
@@ -64,7 +64,7 @@ span[title] {
 }
 </style>
 
-<script src="http://gttp.co/v1/api.js"></script>
+<script src="//grtp.co/v1/api.js"></script>
 
 <script>
 var table = document.querySelector('table');
@@ -109,22 +109,20 @@ document.querySelector('#data').textContent
 
 
 (function loadProfile() {
-	if (typeof Gittip == 'undefined')
+	if (typeof Gratipay == 'undefined')
 		return setTimeout(loadProfile, 10);
 
-	Gittip.users.getPublic('rummik', function(data) {
-		Gittip.users.getCharts('rummik', function(chart) {
-			document.querySelector('.receipt-date').innerHTML = chart[0].date;
-			row('Giving', '$' + (+data.giving).toFixed(2));
-			table.innerHTML += '<tr><td colspan=2><hr></td></tr>';
-			row('Expenses', '~$' + (sum).toFixed(2));
+	Gratipay.users.getPublic('rummik', function(data) {
+		document.querySelector('.waiter').innerHTML = '';
+		row('Giving', '$' + (+data.giving).toFixed(2));
+		table.innerHTML += '<tr><td colspan=2><hr></td></tr>';
+		row('Expenses', '~$' + (sum).toFixed(2));
 
-			table.innerHTML += '<tr><td colspan=2>&nbsp;</td></tr>';
-			row('Receiving', '$' + (+chart[0].receipts).toFixed(2));
+		table.innerHTML += '<tr><td colspan=2>&nbsp;</td></tr>';
+		row('Receiving', '$' + (+data.receiving).toFixed(2));
 
-			var s = (+chart[0].receipts) - sum - data.giving;
-			row('After Expenses', (s > 0 ? '' : '-') + '$' + Math.max(s, -s).toFixed(2));
-		});
+		var s = (+data.receiving) - sum - data.giving;
+		row('After Expenses', (s > 0 ? '' : '-') + '$' + Math.max(s, -s).toFixed(2));
 	});
 })();
 
